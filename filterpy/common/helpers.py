@@ -56,7 +56,7 @@ class Saver(object):
         any object with a __dict__ attribute, but intended to be one of the
         filtering classes
 
-    save_current : bool, default=True
+    save_current : bool, default=False
         save the current state of `kf` when the object is created;
 
     skip_private: bool, default=False
@@ -358,3 +358,57 @@ def inv_diagonal(S):
     for i in range(len(S)):
         si[i, i] = 1. / S[i, i]
     return si
+
+
+def outer_product_sum(A, B=None):
+    """
+    Computes the sum of the outer products of the rows in A and B
+
+        P = \Sum {A[i] B[i].T} for i in 0..N
+
+        Notionally:
+
+        P = 0
+        for y in A:
+            P += np.outer(y, y)
+
+    This is a standard computation for sigma points used in the UKF, ensemble
+    Kalman filter, etc., where A would be the residual of the sigma points
+    and the filter's state or measurement.
+
+    The computation is vectorized, so it is much faster than the for loop
+    for large A.
+
+    Parameters
+    ----------
+    A : np.array, shape (M, N)
+        rows of N-vectors to have the outer product summed
+
+    B : np.array, shape (M, N)
+        rows of N-vectors to have the outer product summed
+        If it is `None`, it is set to A.
+
+    Returns
+    -------
+    P : np.array, shape(N, N)
+        sum of the outer product of the rows of A and B
+
+    Examples
+    --------
+
+    Here sigmas is of shape (M, N), and x is of shape (N). The two sets of
+    code compute the same thing.
+
+    >>> P = outer_product_sum(sigmas - x)
+    >>>
+    >>> P = 0
+    >>> for s in sigmas:
+    >>>     y = s - x
+    >>>     P += np.outer(y, y)
+    """
+
+    if B is None:
+        B = A
+
+    outer = np.einsum('ij,ik->ijk', A, B)
+    return np.sum(outer, axis=0)
